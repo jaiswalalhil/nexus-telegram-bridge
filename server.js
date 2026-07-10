@@ -31,18 +31,20 @@ app.post('/api/telegram/init', async (req, res) => {
     }
 });
 
-// 2. OTP वेरीफाई करके Session String जनरेट करना
+// 2. OTP वेरीफाई करके Session String जनरेट करना (Fix Version Error)
 app.post('/api/telegram/verify', async (req, res) => {
     const { userId, otp } = req.body;
     const userData = activeClients.get(userId);
     if (!userData) return res.status(400).json({ error: 'Session not found' });
 
-    const { client, phoneCodeHash, phone } = userData;
+    const { client, phone, phoneCodeHash } = userData;
     try {
-        await client.signIn({
-            phoneNumber: phone,
-            phoneCodeHash: phoneCodeHash,
-            phoneCode: otp
+        // नए वर्जन में लॉगिन के लिए client.start का उपयोग करते हैं
+        await client.start({
+            phoneNumber: () => phone,
+            phoneCode: () => otp,
+            password: () => "", // अगर 2-Step Verification ऑन हो तो यूजर यहाँ पासवर्ड डाल सकता है
+            onError: (err) => { throw err; }
         });
         
         const sessionString = client.session.save();
@@ -69,4 +71,3 @@ app.post('/api/telegram/send', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-          
